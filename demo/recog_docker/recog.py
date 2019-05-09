@@ -6,12 +6,16 @@ import time
 import base64
 import http.server
 import socketserver
+import logging
 
 size = 4
 haar_file = 'haarcascade_frontalface_default.xml'
 datasets = 'data'
 data_lock = threading.Lock()
-
+file_lock = threading.Lock()
+logging.basicConfig(filename="logfile.log", format='%(asctime)s %(message)s', filemode='w')
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 class S(BaseHTTPRequestHandler):
     def _set_headers(self):
@@ -30,33 +34,35 @@ class S(BaseHTTPRequestHandler):
     def do_POST(self):
         self._set_headers()
         print("in post method")
+        logger.info("post recieved")
         self.data_string = self.rfile.read(int(self.headers['Content-Length']))
 
         # Convert back to binary
         png_original = base64.b64decode(self.data_string)
-
+        print("self.path", self.path)
+        print(self.path.split('/'))
+        none, name, count = self.path.split('/')
+        # path_default = os.path.join(datasets, name.replace('/', ''))
+        # print(path_default)
+        path = datasets + "/" + name
+        print(path, name)
+        if not os.path.isdir(path):
+            print("directory present at :"+ path)
+            os.mkdir(path)	
         # Write to a file to show conversion worked
-        with open(self.path.repalce('/', '') + "/1" + '.png', 'wb') as f_output:
-            f_output.write(png_original)
-        # self.send_response(200)
-        # self.end_headers()
-        # print("data_string", self.data_string)
-        # print("got post!!")
-        # content_len = int(self.headers.getheader('content-length', 0))
-        # post_body = self.rfile.read(content_len)
-        # print("post_body", type(post_body), post_body)
-        # test_data = simplejson.loads(post_body)
-        # print("test data:", type(test_data), test_data)
-        #
-        # data = simplejson.loads(self.data_string)
-        # print("data_string", type(data), data)
-        # self.wfile.write(bytes("received", "utf-8"))
+        with file_lock:
+            print("in data lock")
+            with open("%s/%s.png"%(path, count), 'wb') as f_output:
+                print("%s/%s.png"%(path, count))
+                # logger.info("path at :%s/1.png"%path)
+                f_output.write(png_original)
         return
 
 
 def run(server_class=HTTPServer, handler_class=S, port=8000):
     server_address = ('127.0.0.1', port)
     httpd = server_class(server_address, handler_class)
+    logger.info('Starting httpd...')
     print('Starting httpd...')
     print(time.asctime(), 'Server started on port', port)
     print('....')
@@ -87,8 +93,9 @@ for (subdirs, dirs, files) in os.walk(datasets):
         for filename in os.listdir(subjectpath):
             path = subjectpath + '/' + filename
             lable = id
-            images.append(cv2.imread(path, 0))
-            lables.append(int(lable))
+            with data_lock:
+                images.append(cv2.imread(path, 0))
+                lables.append(int(lable))
             print(type(images), type(lable))
         id += 1
 (width, height) = (130, 100)
@@ -101,38 +108,27 @@ def update_data():
     global names
     global model
     while True:
+        time.sleep(2)
+        (images_p, lables_p, names_p, id) = ([], [], {}, 0)
         for (subdirs, dirs, files) in os.walk(datasets):
             for subdir in dirs:
-                if subdir not in names.values():
-                    print(subdir, names)
-                    with data_lock:
-                        names[id] = subdir
-                        subjectpath = os.path.join(datasets, subdir)
-                        for filename in os.listdir(subjectpath):
-                            path = subjectpath + '/' + filename
-                            lable = id
-                            image = numpy.array([cv2.imread(path, 0)])
-                            print(image.shape)
-                            images = numpy.append(images, image)
-                            lables = numpy.append(lables, lable)
-                            model.update(image, numpy.array(lable))
-                            print(type(images), type(lable))
-                        id += 1
-
-
-# def http_server():
-#     port = 8000
-#
-#     handler = http.server.SimpleHTTPRequestHandler
-#
-#     with socketserver.TCPServer(("", port), handler) as httpd:
-#         print("serving at port", port)
-#         httpd.serve_forever()
-#     #
-#     # httpd = SocketServer.TCPServer(("", port), handler)
-#     #
-#     # print("serving at port", port)
-#     # httpd.serve_forever()
+                names_p[id] = subdir
+                subjectpath = os.path.join(datasets, subdir)
+                for filename in os.listdir(subjectpath):
+                    path = subjectpath + '/' + filename
+                    lable_p = id
+                    with file_lock:
+                        images_p.append(cv2.imread(path, 0))
+                    lables_p.append(int(lable_p))
+                id += 1
+        (images_p, lables_p) = [numpy.array(lis) for lis in [images_p, lables_p]]
+        model_p = cv2.face.LBPHFaceRecognizer_create()
+        model_p.train(images_p, lables_p)
+        with data_lock:
+            names = names_p
+            images = images_p
+            lables = lables_p
+            model = model_p
 
 
 # Create a Numpy array from the two lists above
@@ -159,6 +155,7 @@ server_run.start()
 # Part 2: Use fisherRecognizer on camera stream
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 webcam = cv2.VideoCapture(0)
+logger.info("while:true")
 while True:
     (_, im) = webcam.read()
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
@@ -170,13 +167,12 @@ while True:
         with data_lock:
             # Try to recognize the face
             prediction = model.predict(face_resize)
-            match_name = names[prediction[0]]
-        prediction_score = prediction[1]
         cv2.rectangle(im, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
-        if prediction_score < 80:
-            cv2.putText(im, '% s - %.0f' % (match_name, prediction_score), (x - 10, y - 10), cv2.FONT_HERSHEY_PLAIN, 1,
-                        (0, 255, 0))
+        if prediction[1] < 500:
+            with data_lock:
+                cv2.putText(im, '% s - %.0f' % (names[prediction[0]], prediction[1]), (x - 10, y - 10), cv2.FONT_HERSHEY_PLAIN, 1,
+                            (0, 255, 0))
         else:
             cv2.putText(im, 'not recognized', (x - 10, y - 10), cv2.FONT_HERSHEY_PLAIN, 1, (0, 255, 0))
 
