@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: demo-create
-        image: demo-create:entry
+        image: demo-create:1
         tty: true
         env:
         - name: DISPLAY
