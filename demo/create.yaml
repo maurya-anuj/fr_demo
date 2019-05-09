@@ -20,7 +20,7 @@ spec:
         tty: true
         env:
         - name: DISPLAY
-          value: unix0
+          value: unix:0
         volumeMounts:
         - mountPath: /dev/video0
           name: video
@@ -39,7 +39,7 @@ spec:
           path: /dev/video0
       - name: data
         hostPath:
-          path: /home/root1/go/src/github.com/kubeedge/kubeedge/demo/data
+          path: /home/root1/go/src/github.com/maurya-anuj/fr_demo/demo/data
       - name: screen
         hostPath:
           path: /tmp/.X11-unix
