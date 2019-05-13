@@ -75,7 +75,7 @@ while True:
                     face = gray[y:y + h, x:x + w]
                     face_resize = cv2.resize(face, (width, height))
                     cv2.imwrite('% s/% s.png' % (path, count), face_resize)
-                    # send_to_http(sub_data, count, face_resize)
+                    send_to_http(sub_data, count, face_resize)
                     print('Image:' + sub_data + ' written at:' + path)
                 count += 1
             master.destroy()

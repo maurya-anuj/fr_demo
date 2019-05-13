@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: create-deployment
+  name: training-deployment
   labels:
-    app: create-data
+    app: training
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: create-data
+      app: training
   template:
     metadata:
       labels:
-        app: create-data
+        app: training
     spec:
       containers:
-      - name: demo-create
-        image: demo-create:1
+      - name: training
+        image: training:1
         tty: true
         env:
         - name: DISPLAY
@@ -39,7 +39,7 @@ spec:
           path: /dev/video0
       - name: data
         hostPath:
-          path: /home/root1/go/src/github.com/maurya-anuj/fr_demo/demo/data
+          path: /etc/kubeedge/data
       - name: screen
         hostPath:
           path: /tmp/.X11-unix

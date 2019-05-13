@@ -3,20 +3,21 @@ kind: Deployment
 metadata:
   name: recog-deployment
   labels:
-    app: recog-image
+    app: recognition
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: recog-image
+      app: recognition
   template:
     metadata:
       labels:
-        app: recog-image
+        app: recognition
     spec:
       containers:
-      - name: demo-recog
-        image: demo-recog:1
+      - name: recognition
+        image: localhost:5000/recog
+        imagePullPolicy: IfNotPresent
         tty: true
         env:
         - name: DISPLAY
@@ -39,7 +40,7 @@ spec:
           path: /dev/video0
       - name: data
         hostPath:
-          path: /home/root1/go/src/github.com/maurya-anuj/fr_demo/demo/data
+          path: /etc/kubeedge/data
       - name: screen
         hostPath:
           path: /tmp/.X11-unix
