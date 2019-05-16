@@ -58,7 +58,7 @@ while True:
         e1 = Entry(master)
 
 
-        def answer(self):
+        def answer():
             count = 1
             # defining the size of images
             (width, height) = (130, 100)
@@ -80,7 +80,29 @@ while True:
                 count += 1
             master.destroy()
 
-        e1.bind('<Return>', func=answer)
+        def answerenter(self):
+                    count = 1
+                    # defining the size of images
+                    (width, height) = (130, 100)
+                    sub_data = e1.get()
+                    path = os.path.join(datasets, sub_data)
+                    if not os.path.isdir(path):
+                        os.mkdir(path)
+                    while count < 30:
+                        (_, im) = webcam.read()
+                        gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+                        faces = face_cascade.detectMultiScale(gray, 1.3, 4)
+                        for (x, y, w, h) in faces:
+                            cv2.rectangle(im, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                            face = gray[y:y + h, x:x + w]
+                            face_resize = cv2.resize(face, (width, height))
+                            cv2.imwrite('% s/% s.png' % (path, count), face_resize)
+                            send_to_http(sub_data, count, face_resize)
+                            print('Image:' + sub_data + ' written at:' + path)
+                        count += 1
+                    master.destroy()
+
+        e1.bind('<Return>', func=answerenter)
 
         # These are sub data sets of folder,
         # for my faces I've used my name you can
