@@ -1,55 +1,94 @@
 # fr_demo
 
 
-### Setup steps:
+### Cloud steps:
+- clone repo in GOPATH:
+    ```
+    https://github.com/maurya-anuj/kubeedge.git
+    ```
 - check kubernetes master is not running
 	```
 	kubeadm reset
 	```
 - check wifi connection
 
-- run kubeedge init
+- make and run kubeedge init from cloned repo:
 	```
 	./kubeeadge init
 	```
+- check training image is locally present. If not get it via:
 
-- check certificates path of edgecontroller then make and run it from:
-    ```
-        cd /home/src/github.com/kubeedge/kubeedge/cloud/
-    ```
-- apply the create.yaml checking that training:1 image is available in local
-	```
-	kubectl apply -f /home/src/fr_demo/demo/create.yaml
-	```
+	1> from docker hub:
+	
+         docker pull anujmaurya/training:1
+         docker tag anujmaurya/training:1 training:2
+        
+    2> OR, build it with base-docker then create_docker folder of [demo repo](https://github.com/maurya-anuj/fr_demo).
+       
+        cd /home/src/
+        cd fr_demo/demo/demo_docker/
+        docker build -t demo-docker:1 ./
+        cd ../create_docker/
+        docker build -t training:2 ./
+        
+- make and run edgecontroller from cloned repo:
 
-- Edge side
-- check the certificates folder in /etc/kubeedge/certs
+
+### Edge steps:
+- run: **xhost +local:user:root**
+- download edge release version from
+    [kubeedge-v0.3.0-beta.0](https://github.com/kubeedge/kubeedge/releases/download/v0.3.0-beta.0/kubeedge-v0.3.0-beta.0-linux-amd64.tar.gz)
+
+- clone demo repository in $GOPATH/src/
+    ```oraclesqlplus
+    git clone https://github.com/maurya-anuj/fr_demo.git
+    ```
+- copy certificates to /etc/kubeedge/certs from [demo repo](https://github.com/maurya-anuj/fr_demo/tree/master/certs)
+- copy data folder from demo repository to /etc/kubeedge/
+
 - check the ip of edgecontroller in conf/edge.yaml
-    ```cassandraql
+    ```
     vi /home/root1/go/src/github.com/kubeedge/kubeedge/edge/conf/edge.yaml
     ```
 - check recog image is locally present. If not get it via:
-	- from docker hub:
-        ```
+	1> from docker hub:
+   
          docker pull anujmaurya/recog:1
-        ```
-
-    - build it with base-docker then rocog_docker folder of demo repo.
-        ```
-        cd /home/src/fr_demo/demo/demo_docker/        - build it with base-docker then rocog_docker folder of demo repo.
+         docker tag anujmaurya/recog:1 recog:1
+    
+    2> OR, build it with base-docker then recog_docker folder of [demo repo](https://github.com/maurya-anuj/fr_demo).
+       
+        cd $GOPATH/src/fr_demo/demo/demo_docker/
         docker build -t demo-docker:1 ./
-        cd /home/src/fr_demo/demo/create_docker/
-        docker build -t training:1 ./
-        ```
+        cd $GOPATH/src/fr_demo/demo/recog_docker/
+        docker build -t recog:1 ./
+       
 - run the repository and push recog:1 image in localhost:5000/facerecog:1
 	[https://docs.docker.com/registry/deploying/](https://docs.docker.com/registry/deploying/) 
+	```
+    docker run -d -p 5000:5000 --restart=always --name registry registry:2
+    
+    docker tag recog:1 localhost:5000/facerecog:1
+    docker push localhost:5000/facerecog:1
+    
+    docker image remove recog:1
+    docker image remove localhost:5000/facerecog:1
+    
+    docker pull localhost:5000/facerecog:1
+    ```
 
 - run edge & check node is ready.
+
+
+## Start the apps:
 - apply recog.yaml from cloud
 	```
-        kubectl apply -f /home/src/fr_demo/demo/recog.yaml
+	    kubectl apply -f /home/src/fr_demo/demo/recog.yaml
     ```
-   
+- apply the create.yaml from cloud
+	```
+	    kubectl apply -f /home/src/fr_demo/demo/create.yaml
+	```   
 
 
 ### IF kubeedge init breaks
@@ -61,3 +100,6 @@
     ```
     iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
     ```
+### IF pod deployment fails:
+- xhost +local:user:root is applied
+- image name matches in yaml and local docker images.

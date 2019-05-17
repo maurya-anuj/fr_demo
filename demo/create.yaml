@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: training
-        image: training:1
+        image: training:2
         tty: true
         env:
         - name: DISPLAY
